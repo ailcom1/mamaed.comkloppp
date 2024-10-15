@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <title>واجهة عداد</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #F5F5F5;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .points-box {
+            position: absolute;
+            top: 0;
+            background-color: #fff;
+            border: 2px solid #FFD700;
+            border-radius: 10px;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 18px;
+            color: #333;
+            width: 80%;
+            margin-top: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .circle {
+            width: 200px;
+            height: 200px;
+            background-color: #000;
+            border: 10px solid #FFD700;
+            border-radius: 50%;
+            margin-bottom: 20px;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .btn {
+            background-color: #20C997;
+            color: #fff;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn:active {
+            background-color: #1BA87C;
+        }
+
+        .input-box {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            width: 80%;
+            max-width: 400px;
+        }
+
+        /* الشريط الإخباري */
+        .news-ticker {
+            width: 100%;
+            margin-top: 20px;
+            overflow: hidden;
+            white-space: nowrap;
+            box-sizing: border-box;
+            border: 2px solid #20C997;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+
+        .news-ticker p {
+            display: inline-block;
+            padding-left: 100%;
+            animation: scrollText 10s linear infinite;
+            font-size: 16px;
+            color: #333;
+        }
+
+        @keyframes scrollText {
+            0% {
+                transform: translateX(100%);
+            }
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+
+        /* إخفاء العناصر */
+        .hidden {
+            display: none;
+        }
+    </style>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+      import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyAgcSZWvQego1D1tTAwWbK1M-kjwvq9DRc",
+        authDomain: "dollar-counter-at-a-glance.firebaseapp.com",
+        databaseURL: "https://dollar-counter-at-a-glance-default-rtdb.firebaseio.com",
+        projectId: "dollar-counter-at-a-glance",
+        storageBucket: "dollar-counter-at-a-glance.appspot.com",
+        messagingSenderId: "906071189919",
+        appId: "1:906071189919:web:53d813e50556b0b15175aa",
+        measurementId: "G-6WQQEW1W0Y"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const database = getDatabase(app);
+
+      let points = 0;
+      let username = "";
+
+      // تحميل النقاط عند فتح الصفحة
+      function loadPoints() {
+          const dbRef = ref(database);
+          get(child(dbRef, `users/${username}/points`)).then((snapshot) => {
+              if (snapshot.exists()) {
+                  points = snapshot.val();
+                  document.getElementById("points-display").textContent = "نقاط متحصلة: " + points;
+              } else {
+                  document.getElementById("points-display").textContent = "نقاط متحصلة: 0";
+              }
+          }).catch((error) => {
+              console.error("Error loading points: ", error);
+          });
+      }
+
+      // حفظ النقاط في Firebase
+      function savePoints() {
+          set(ref(database, `users/${username}`), {
+              points: points
+          });
+      }
+
+      function updatePoints() {
+          points += 100; // إضافة 100 نقطة
+          document.getElementById("points-display").textContent = "نقاط متحصلة: " + points;
+          savePoints(); // حفظ النقاط في قاعدة البيانات
+      }
+
+      // دالة لإنشاء الحساب وإدخال اسم المستخدم
+      window.setUsername = function() {
+          username = document.getElementById("username").value;
+          if (username) {
+              // حفظ الاسم في قاعدة البيانات و إخفاء المدخل
+              savePoints();
+              document.querySelector('.input-box').classList.add('hidden');
+              document.querySelector('.username-buttons').classList.add('hidden');
+          } else {
+              alert("من فضلك أدخل اسم المستخدم الخاص بك.");
+          }
+      };
+
+      // دالة العد التنازلي
+      window.startCountdown = function(button) {
+          if (!username) {
+              alert("من فضلك أدخل اسم المستخدم الخاص بك.");
+              return;
+          }
+
+          let seconds = 9;
+          button.disabled = true; // تعطيل الزر أثناء العد التنازلي
+
+          const countdownInterval = setInterval(() => {
+              button.textContent = seconds;
+              seconds--;
+
+              if (seconds < 0) {
+                  clearInterval(countdownInterval);
+                  button.textContent = 'تشغيل';
+                  button.disabled = false; // تمكين الزر بعد انتهاء العد التنازلي
+                  updatePoints(); // تحديث النقاط
+              }
+          }, 1000);
+      };
+
+      // التحقق من وجود اسم المستخدم في قاعدة البيانات عند فتح الصفحة
+      window.onload = function() {
+          const savedUsername = localStorage.getItem('username');
+          if (savedUsername) {
+              username = savedUsername;
+              loadPoints(); // تحميل النقاط إذا كان اسم المستخدم موجودًا
+              document.querySelector('.input-box').classList.add('hidden');
+              document.querySelector('.username-buttons').classList.add('hidden');
+          } else {
+              document.querySelector('.input-box').classList.remove('hidden'); // إظهار إدخال اسم المستخدم
+              document.querySelector('.username-buttons').classList.remove('hidden'); // إظهار زر الحفظ
+          }
+      };
+    </script>
+</head>
+<body>
+
+    <!-- صندوق عرض النقاط -->
+    <div class="points-box" id="points-display">
+        نقاط متحصلة: 0
+    </div>
+
+    <!-- الدائرة الكبيرة -->
+    <div class="circle"></div>
+
+    <!-- الأزرار -->
+    <div class="buttons">
+        <button class="btn" onclick="startCountdown(this)">تشغيل</button>
+    </div>
+
+    <!-- شريط إخباري متحرك -->
+    <div class="news-ticker">
+        <p>مرحبًا بك في التطبيق! هذا هو الشريط الإخباري الخاص بك. تابع معنا لمعرفة المزيد من الأخبار.</p>
+    </div>
+
+    <!-- إدخال اسم المستخدم -->
+    <div class="input-box hidden">
+        <input type="text" id="username" placeholder="أدخل اسم المستخدم الخاص بك" />
+    </div>
+
+    <!-- زر حفظ -->
+    <div class="buttons username-buttons hidden">
+        <button class="btn" onclick="setUsername()">حفظ اسم المستخدم</button>
+    </div>
+
+</body>
+</html>
